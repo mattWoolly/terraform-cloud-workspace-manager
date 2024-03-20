@@ -39,17 +39,25 @@ Replace <your_api_token_here> with your actual Terraform Cloud API token.
 The script can be run from the command line with various arguments to perform actions on your Terraform Cloud workspace.
 
 -   **Set Execution Mode**:
-`./workspace_manager.py --local # Set workspace to local execution mode.
-./workspace_manager.py --remote # Set workspace to remote execution mode.` 
+```
+./workspace_manager.py --local # Set workspace to local execution mode.
+./workspace_manager.py --remote # Set workspace to remote execution mode.
+```
 
 -   **Change VCS Branch**:
-`./workspace_manager.py --change-branch "new-branch-name"` 
+```
+./workspace_manager.py --change-branch "new-branch-name"
+``` 
 
 -   **Set VCS Trigger Paths**:
-`./workspace_manager.py --set-trigger-paths` 
+```
+./workspace_manager.py --set-trigger-paths
+```
 
 -   **Reset workspace to default settings (remote, main branch, working directory, and trigger paths)**
-`./workspace_manager.py --reset-workspace`
+```
+./workspace_manager.py --reset-workspace
+```
 
 The script determines the repository root and sets trigger paths based on your current working directory.
 

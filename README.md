@@ -101,7 +101,9 @@ With aliases set up, you can now easily manage your Terraform Cloud workspace se
 
 -   Change the VCS branch (replace `new-branch-name` with your target branch name):
 
-`% tfsetbranch new-branch-name` 
+```
+% tfsetbranch new-branch-name
+```
 
 -   Set the VCS trigger paths:
 ```

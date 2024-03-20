@@ -1,12 +1,14 @@
 # Terraform Cloud Workspace Manager
 
-This Python script is designed to manage Terraform Cloud workspace settings with ease, allowing you to change workspace execution modes, update VCS branch settings, and configure VCS trigger paths directly from the command line.
+This Python script is designed to manage Terraform Cloud workspace settings efficiently, offering command-line options to change workspace execution modes, update VCS branch settings, configure VCS trigger paths, and reset workspace settings to a predefined state.
 
 ## Features
 
 -   **Set Execution Mode**: Switch between local and remote execution modes for your Terraform Cloud workspaces.
 -   **Change VCS Branch**: Update the VCS branch that your Terraform Cloud workspace tracks.
 -   **Set VCS Trigger Paths**: Specify paths within your repository that should trigger runs when changes are detected.
+-   **Set VCS Trigger Paths**: Define paths within your repository to trigger runs when changes are detected.
+-   **Reset Workspace Settings**: Apply a predefined set of settings to quickly reset or initialize a workspace configuration.
 
 ## Getting Started
 
@@ -23,7 +25,14 @@ This Python script is designed to manage Terraform Cloud workspace settings with
 `pip install -r requirements.txt` 
 
 3.  Clone this repository or download the script to your local machine.
-4.  Replace the `API_TOKEN` variable in the script with your Terraform Cloud API token.
+4.  Create a config.json file in the same directory as the script with your Terraform Cloud API token and base URL:
+```
+{
+    "API_TOKEN": "<your_api_token_here>",
+    "API_BASE_URL": "https://app.terraform.io/api/v2/"
+}
+```
+Replace <your_api_token_here> with your actual Terraform Cloud API token.
 
 ### Usage
 
@@ -38,6 +47,9 @@ The script can be run from the command line with various arguments to perform ac
 
 -   **Set VCS Trigger Paths**:
 `./workspace_manager.py --set-trigger-paths` 
+
+-   **Reset workspace to default settings (remote, main branch, working directory, and trigger paths)**
+`./workspace_manager.py --reset-workspace`
 
 The script determines the repository root and sets trigger paths based on your current working directory.
 
@@ -54,8 +66,9 @@ At the bottom of the file, add aliases for the script. Be sure to replace `(path
 ```
 alias tflocal='python3 /path/to/workspace_manager.py --local'
 alias tfremote='python3 /path/to/workspace_manager.py --remote'
-alias tfsetbranch='python3 /path/to/workspace_manager.py --set-branch main'
+alias tfsetbranch='python3 /path/to/workspace_manager.py --change-branch main'
 alias tfsettriggers='python3 /path/to/workspace_manager.py --set-trigger-paths'
+alias tfreset='python3 /path/to/workspace_manager.py --reset-workspace'
 ```
 
 These aliases allow you to execute the script's functionalities without typing the full command:

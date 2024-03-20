@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import requests
 import re
 import argparse
@@ -11,9 +12,21 @@ from colorama import Fore, init
 # Initialize Colorama for colored output in the terminal
 init(autoreset=True)
 
-# Constants and Configuration
-API_BASE_URL = "https://app.terraform.io/api/v2/"
-API_TOKEN = "API_TOKEN"
+# Get the path relative to the script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(script_dir, 'config.json')
+
+# Load configuration
+def load_config(config_file='config.json'):
+    with open(config_file, 'r') as file:
+        config = json.load(file)
+    return config
+
+config = load_config(config_path)
+
+# Set environment
+API_TOKEN = config.get('API_TOKEN', '')  # Safely get the API_TOKEN, default to empty if not found
+API_BASE_URL = config.get('API_BASE_URL', '') 
 HEADERS = {
     "Authorization": f"Bearer {API_TOKEN}",
     "Content-Type": "application/vnd.api+json",
@@ -56,13 +69,21 @@ class WorkspaceManager:
 
     @staticmethod
     def _log_response(response, settings):
+        success_messages = {
+            "working-directory": "Successfully updated working directory to: {}",
+            "execution-mode": "Successfully updated workspace execution mode to: {}",
+            "trigger-patterns": "Successfully updated workspace trigger patterns to: {}",
+            "vcs-repo": "Successfully updated workspace branch to: {}",
+        }
+        
         if response.status_code == 200:
-            if "working-directory" in settings:
-                print(Fore.GREEN + f"    ✓ Successfully updated working directory to: {settings['working-directory']}")
-            if "execution-mode" in settings:
-                print(Fore.GREEN + f"    ✓ Successfully updated workspace execution mode to: {settings['execution-mode']}")
-            if "trigger-patterns" in settings:
-                print(Fore.GREEN + f"    ✓ Successfully updated workspace trigger patterns to: {settings['trigger-patterns']}")
+            for key, message in success_messages.items():
+                if key in settings:
+                    # Special handling for nested dictionaries like "vcs-repo"
+                    if isinstance(settings[key], dict) and key == "vcs-repo" and "branch" in settings[key]:
+                        print(Fore.GREEN + f"    ✓ {message.format(settings[key]['branch'])}")
+                    else:
+                        print(Fore.GREEN + f"    ✓ {message.format(settings[key])}")
         else:
             print(Fore.RED + f"    ✖ Failed to update workspace settings. Status code: {response.status_code}, Message: {response.text}\n")
 
@@ -79,15 +100,39 @@ class WorkspaceManager:
         repo_root = WorkspaceManager.find_repo_root(os.getcwd())
         return os.path.relpath(os.getcwd(), start=repo_root)
 
+def build_settings(args):
+    settings = {}
+    if args.local:
+        settings["execution-mode"] = "local"
+    elif args.remote:
+        settings["execution-mode"] = "remote"
+    if args.change_branch:
+        settings["vcs-repo"] = {"branch": args.change_branch}
+    if args.set_working_directory:
+        settings["working-directory"] = WorkspaceManager.get_working_directory()
+    if args.set_trigger_paths:
+        repo_root = WorkspaceManager.find_repo_root(os.getcwd())
+        relative_path = os.path.relpath(os.getcwd(), start=repo_root)
+        settings["trigger-patterns"] = [f"{relative_path}/**/*", f"{relative_path}/common/**/*"]
+    return settings
+
 def main():
     parser = argparse.ArgumentParser(description='Manage Terraform Cloud workspace settings.')
-    parser.add_argument('--local', action='store_true', help='Set workspace to local execution mode.')
-    parser.add_argument('--remote', action='store_true', help='Set workspace to remote execution mode.')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--local', action='store_true', help='Set workspace to local execution mode.')
+    group.add_argument('--remote', action='store_true', help='Set workspace to remote execution mode.')
     parser.add_argument('--change-branch', type=str, help='Change the VCS branch of the workspace.')
     parser.add_argument('--set-working-directory', action='store_true', help='Update the working directory based on the current directory relative to the repo root.')
     parser.add_argument('--set-trigger-paths', action='store_true', help='Set VCS trigger paths based on the current directory relative to the repo root.')
+    parser.add_argument('--reset-workspace', action='store_true', help='Reset workspace to default settings.')
 
     args = parser.parse_args()
+
+    if args.reset_workspace:
+        args.remote = True
+        args.change_branch = 'main'
+        args.set_working_directory = True
+        args.set_trigger_paths = True
 
     api_client = TerraformCloudAPI()
     manager = WorkspaceManager(api_client)
@@ -96,25 +141,16 @@ def main():
 
     if workspace_name and organization_name:
         print(Fore.GREEN + f"Workspace '{workspace_name}' found in organization '{organization_name}'.")
-
-        settings = {}
-        if args.local:
-            settings["execution-mode"] = "local"
-        elif args.remote:
-            settings["execution-mode"] = "remote"
-        if args.change_branch:
-            settings["vcs-repo"] = {"branch": args.change_branch}
-        if args.set_working_directory:
-            settings["working-directory"] = WorkspaceManager.get_working_directory()
-        if args.set_trigger_paths:
-            repo_root = WorkspaceManager.find_repo_root(os.getcwd())
-            relative_path = os.path.relpath(os.getcwd(), start=repo_root)
-            trigger_paths = [f"{relative_path}/**/*", f"{relative_path}/common/**/*"]
-            settings["trigger-patterns"] = trigger_paths
-
-        # Update the workspace with the collected settings
+        settings = build_settings(args)
         if settings:
-            manager.update_workspace_settings(organization_name, workspace_name, **settings)
+            try:
+                manager.update_workspace_settings(organization_name, workspace_name, **settings)
+            except Exception as e:  
+                print(Fore.RED + f"Failed to update settings due to an error: {e}")
+                
+    else:
+        print(Fore.RED + "Failed to find workspace or organization name. Please check your terraform.tf file and try again.")
+
 
 if __name__ == "__main__":
     main()

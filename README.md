@@ -110,6 +110,11 @@ With aliases set up, you can now easily manage your Terraform Cloud workspace se
 % tfsettriggers
 ```
 
+-   Reset everything:
+```
+% tfreset
+```
+
 ### Adding New Features
 
 To extend this script with new functionalities:
